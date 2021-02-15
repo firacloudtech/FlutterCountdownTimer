@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/index.dart';
+import 'package:ntp/ntp.dart';
 
 class CountdownController extends ValueNotifier<int> {
   CountdownController({
@@ -17,6 +18,10 @@ class CountdownController extends ValueNotifier<int> {
   final Duration stepDuration;
 
   bool get isRunning => _diffTimer != null;
+
+  Future<DateTime> getNTP() async {
+    return await NTP.now();
+  }
 
   CurrentRemainingTime get currentRemainingTime {
     int days, hours, min, sec;
@@ -46,7 +51,7 @@ class CountdownController extends ValueNotifier<int> {
     if (value <= 0) return;
     _dispose();
     Duration duration = _getDuration();
-    if(duration == stepDuration) {
+    if (duration == stepDuration) {
       _diffTimer = Timer.periodic(stepDuration, (Timer timer) {
         _diffTime(stepDuration);
       });
@@ -60,9 +65,10 @@ class CountdownController extends ValueNotifier<int> {
     }
   }
 
-  _diffTime(Duration duration) {
+  _diffTime(Duration duration) async {
     value = max(value - duration.inMilliseconds, 0);
-    _lastTimestamp = DateTime.now().millisecond;
+    DateTime serverTime = await getNTP();
+    _lastTimestamp = serverTime.millisecond;
     if (value <= 0) {
       stop();
       return;
@@ -70,9 +76,10 @@ class CountdownController extends ValueNotifier<int> {
   }
 
   ///pause
-  stop() {
+  stop() async {
     if (_lastTimestamp != null && value > 0) {
-      _lostTime = DateTime.now().millisecond - _lastTimestamp;
+      DateTime serverTime = await getNTP();
+      _lostTime = serverTime.millisecond - _lastTimestamp;
     }
     _dispose();
   }

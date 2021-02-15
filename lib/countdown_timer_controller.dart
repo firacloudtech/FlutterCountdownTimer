@@ -2,28 +2,38 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/index.dart';
+import 'package:ntp/ntp.dart';
 
 ///Countdown timer controller.
 class CountdownTimerController extends ChangeNotifier {
   CountdownTimerController({int endTime, this.onEnd})
       : assert(endTime != null),
         _endTime = endTime;
+
   ///Event called after the countdown ends
   final VoidCallback onEnd;
+
   ///The end time of the countdown.
   int _endTime;
+
   ///Is the countdown running.
   bool _isRunning = false;
+
   ///Countdown remaining time.
   CurrentRemainingTime _currentRemainingTime;
+
   ///Countdown timer.
   Timer _countdownTimer;
+
   ///Intervals.
   Duration intervals = const Duration(seconds: 1);
+
   ///Seconds in a day
   int _daySecond = 60 * 60 * 24;
+
   ///Seconds in an hour
   int _hourSecond = 60 * 60;
+
   ///Seconds in a minute
   int _minuteSecond = 60;
   bool get isRunning => _isRunning;
@@ -44,8 +54,8 @@ class CountdownTimerController extends ChangeNotifier {
   }
 
   ///Check if the countdown is over and issue a notification.
-  _countdownPeriodicEvent() {
-    _currentRemainingTime = _calculateCurrentRemainingTime();
+  _countdownPeriodicEvent() async {
+    _currentRemainingTime = await _calculateCurrentRemainingTime();
     notifyListeners();
     if (_currentRemainingTime == null) {
       onEnd?.call();
@@ -53,12 +63,17 @@ class CountdownTimerController extends ChangeNotifier {
     }
   }
 
+  Future<DateTime> getNTP() async {
+    return await NTP.now();
+  }
+
   ///Calculate current remaining time.
-  CurrentRemainingTime _calculateCurrentRemainingTime() {
+  Future<CurrentRemainingTime> _calculateCurrentRemainingTime() async {
     if (_endTime == null) return null;
+    DateTime serverTime = await getNTP();
 
     int remainingTimeStamp =
-        ((_endTime - DateTime.now().millisecondsSinceEpoch) / 1000).floor();
+        ((_endTime - serverTime.millisecondsSinceEpoch) / 1000).floor();
     if (remainingTimeStamp <= 0) {
       return null;
     }
@@ -69,16 +84,19 @@ class CountdownTimerController extends ChangeNotifier {
       days = (remainingTimeStamp / _daySecond).floor();
       remainingTimeStamp -= days * _daySecond;
     }
+
     ///Calculate remaining hours.
     if (remainingTimeStamp >= _hourSecond) {
       hours = (remainingTimeStamp / _hourSecond).floor();
       remainingTimeStamp -= hours * _hourSecond;
     }
+
     ///Calculate remaining minutes.
     if (remainingTimeStamp >= _minuteSecond) {
       min = (remainingTimeStamp / _minuteSecond).floor();
       remainingTimeStamp -= min * _minuteSecond;
     }
+
     ///Calculate remaining second.
     sec = remainingTimeStamp.toInt();
     return CurrentRemainingTime(days: days, hours: hours, min: min, sec: sec);
